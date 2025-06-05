@@ -1,12 +1,12 @@
 #include "contiki.h"
 #include "dev/leds.h"
 #include "dev/dht22.h"
+#include "dev/adc-zoul.h"
 #include "dev/adc-sensors.h"
 #include "dev/button-sensor.h"
 #include <stdio.h>
 
 /* --- Configuration --- */
-#define ROTARY_SENSOR_PIN 5  // A5 on RE-Mote
 #define SENSOR_READ_INTERVAL (CLOCK_SECOND * 2)
 
 /* --- Process Declaration --- */
@@ -16,51 +16,38 @@ AUTOSTART_PROCESSES(&smart_coffee_gadget_process);
 /* --- Global Timer --- */
 static struct etimer sensor_timer;
 
-/* --- Main Process --- */
 PROCESS_THREAD(smart_coffee_gadget_process, ev, data)
 {
-  PROCESS_BEGIN();
+  int16_t temperature; // Default 24.5°C (represented as 245 to have 24.5)
+  int16_t humidity;    // Default 65.0%
+  uint16_t rotation = 150; // Default rotation raw value
 
-  int temperature = 24; // Default 24.5°C
-  int humidity = 650;    // Default 65.0%
-  uint16_t rotation = 150; // Default rotation value
+  PROCESS_BEGIN();
 
   /* Activate sensors */
   SENSORS_ACTIVATE(dht22);
-  adc_zoul.configure(ANALOG_PHIDGET_ROTATION_1109, ROTARY_SENSOR_PIN);
+  adc_zoul.configure(SENSORS_HW_INIT, ZOUL_SENSORS_ADC3);
   SENSORS_ACTIVATE(button_sensor);
 
   while(1) {
     etimer_set(&sensor_timer, SENSOR_READ_INTERVAL);
     PROCESS_WAIT_EVENT();
 
-    /* --- Read DHT22 Sensor --- */
     if(ev == PROCESS_EVENT_TIMER && etimer_expired(&sensor_timer)) {
-      if(dht22_read_all(&temperature, &humidity) == DHT22_ERROR) {
-        temperature=245;
-        humidity=650;
-        printf("[Mock] Temperature: %d.%d °C, Humidity: %d.%d %%RH\n",
-               temperature / 10, temperature % 10,
-               humidity / 10, humidity % 10);
+      /* Read DHT22 sensor */
+      if(dht22_read_all(&temperature, &humidity) != DHT22_ERROR) {
+      	printf("Temperature %02d.%02d ºC, ", temperature / 10, temperature % 10);
+      	printf("Humidity %02d.%02d RH\n", humidity / 10, humidity % 10);
       } else {
-        printf("Temperature: %d.%d °C, Humidity: %d.%d %%RH\n",
-               temperature / 10, temperature % 10,
-               humidity / 10, humidity % 10);
+      	printf("Failed to read the sensor\n");
       }
+      clock_delay_usec(1000);
 
-      /* Small delay to avoid conflicts */
-      clock_delay_usec(1000); // 100 ms
+      /* Read rotary angle sensor on ADC channel 3 (ZOUL_SENSORS_ADC5) */
+      rotation = adc_zoul.value(ZOUL_SENSORS_ADC3);
+      printf("Rotary angle raw value: %u\n", rotation);
 
-      /* --- Read Rotary Sensor --- */
-      rotation = adc_zoul.value(ANALOG_PHIDGET_ROTATION_1109);
-      if(rotation == 0 || rotation == ADC_WRAPPER_ERROR) {
-        rotation=150;
-        printf("[Mock] Rotary angle raw value: %u\n", rotation);
-      } else {
-        printf("Rotary angle raw value: %u\n", rotation);
-      }
-
-      /* Optional LED Feedback */
+      /* Optional LED feedback based on rotation value */
       if(rotation < 100) {
         leds_on(LEDS_GREEN);
         leds_off(LEDS_RED | LEDS_BLUE);
@@ -73,11 +60,11 @@ PROCESS_THREAD(smart_coffee_gadget_process, ev, data)
       }
     }
 
-    /* --- Handle Button Press --- */
+    /* Handle button press */
     if(ev == sensors_event && data == &button_sensor) {
       printf("[NOTIFICATION] Coffee storage is LOW! Please refill.\n");
       leds_on(LEDS_RED);
-      clock_delay_usec(1000); // Blink effect
+      clock_delay_usec(1000); // blink effect
       leds_off(LEDS_RED);
     }
   }
