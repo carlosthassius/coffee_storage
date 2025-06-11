@@ -21,8 +21,8 @@ AUTOSTART_PROCESSES(&zol25_sensors_process);
 
 PROCESS_THREAD(zol25_sensors_process, ev, data)
 {
-  static int16_t temperature;
-  static int16_t humidity_air; // Umidade do DHT22
+  static int temperature;
+  static int humidity_air; // Umidade do DHT22
 
   PROCESS_BEGIN();
 
