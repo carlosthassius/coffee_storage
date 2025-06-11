@@ -3,36 +3,35 @@
 #include "dev/adc-sensors.h"
 #include "dev/leds.h"
 #include <stdio.h>
-#include <stdint.h>
 
-/* --- Configurações --- */
+/* --- Configurations --- */
 #define ADC_PIN             2
 #define LOOP_PERIOD         2
 #define LOOP_INTERVAL       (CLOCK_SECOND * LOOP_PERIOD)
 #define LEDS_PERIODIC       LEDS_GREEN
 
-/* --- Variáveis Globais --- */
+/* --- Globals --- */
 static struct etimer et;
 static uint16_t counter;
 
-/* --- Processos --- */
+/* --- Process --- */
 PROCESS(zol25_sensors_process, "Zol25 Sensors");
 AUTOSTART_PROCESSES(&zol25_sensors_process);
 
 PROCESS_THREAD(zol25_sensors_process, ev, data)
 {
-  static int temperature;
-  static int humidity_air; // Umidade do DHT22
+  static int temperature = 0;
+  static int humidity_air = 0;
 
   PROCESS_BEGIN();
 
   counter = 0;
 
-  /* Ativar sensores */
+  /* Activate sensors */
   SENSORS_ACTIVATE(dht22);
   adc_sensors.configure(ANALOG_VAC_SENSOR, ADC_PIN);
 
-  printf("Smart Coffee Gadget: Leitura de sensores iniciada\n");
+  printf("Smart Coffee Gadget: Starting sensor readings...\n");
   leds_on(LEDS_PERIODIC);
   etimer_set(&et, LOOP_INTERVAL);
 
@@ -42,28 +41,28 @@ PROCESS_THREAD(zol25_sensors_process, ev, data)
     if(ev == PROCESS_EVENT_TIMER) {
       leds_toggle(LEDS_PERIODIC);
 
-      printf("-----------------------------------------\n");
-      printf("Contador = 0x%08x\n", counter);
+      int dht_status = dht22_read_all(&temperature, &humidity_air);
 
-      /* Leitura do DHT22 */
-      if(dht22_read_all(&temperature, &humidity_air) != DHT22_ERROR) {
-        printf("Temperatura: %02d.%02d ºC\n", temperature / 10, temperature % 10);
-        printf("Umidade (ar): %02d.%02d %%RH\n", humidity_air / 10, humidity_air % 10);
-      } else {
-        printf("Falha na leitura do sensor DHT22\n");
-      }
+      int adc_val = adc_sensors.value(ANALOG_VAC_SENSOR);
+      float humidity_soil = (adc_val * 100.0f) / 240.0f;
 
-      /* Leitura do sensor analógico de umidade */
-      int val = adc_sensors.value(ANALOG_VAC_SENSOR);
-      int humidity10 = (val * 1000) / 240; // em décimos de porcentagem
+      // Start JSON object
+      printf("{\n");
+      printf("  \"counter\": %u,\n", counter);
 
-      int inteiro = humidity10 / 10;
-      int decimal = humidity10 % 10;
+      if(dht_status != DHT22_ERROR) {
+      printf("  \"temperature_celsius\": %d.%02d,\n", temperature / 10, abs(temperature % 10));
+      printf("  \"humidity_air_rh\": %d.%02d,\n", humidity_air / 10, abs(humidity_air % 10));
+    } else {
+      printf("  \"temperature_celsius\": null,\n");
+      printf("  \"humidity_air_rh\": null,\n");
+    }
 
-      printf("Umidade (sensor analógico): %d.%d%%\n", inteiro, decimal); 
+    int humidity10 = (adc_val * 1000) / 240;
+    printf("  \"humidity_soil_percent\": %d.%d\n", humidity10 / 10, humidity10 % 10);
 
-      /* Reinicia o temporizador */
-      etimer_set(&et, LOOP_INTERVAL);
+
+      etimer_reset(&et);
       counter++;
     }
   }
