@@ -4,17 +4,10 @@
 #include "net/ip/uip-debug.h"
 #include "simple-udp.h"
 #include "net/packetbuf.h"
-#include "../example.h"
+#include "./example.h"
 
-#if CONTIKI_TARGET_ZOUL
 #include "dev/adc-zoul.h"
 #include "dev/zoul-sensors.h"
-#else
-#include "dev/adxl345.h"
-#include "dev/battery-sensor.h"
-#include "dev/i2cmaster.h"
-#include "dev/tmp102.h"
-#endif
 
 #include "sys/etimer.h"
 #include "dev/leds.h"
@@ -47,6 +40,8 @@ int normalize_rotary (int adc_value, int channel) {
     float rotation;
     float ang_min = 0.0f;
     float ang_max = 225.0f;
+    float percent_min = 0.0f;
+    float percent_max = 100.0f;
 
     if(channel==1) {
         float min_bruto = 0.0f;
@@ -60,24 +55,18 @@ int normalize_rotary (int adc_value, int channel) {
             rotation = ang_max;
         }
     }
-    else if(channel==3) {
+    else if(channel == 3) {
         float min_bruto_ch3 = 100.0f;
-            float max_bruto_ch3 = 24000.0f;
+        float max_bruto_ch3 = 24000.0f;
 
-            if (adc_value <= (int)min_bruto_ch3) {
-                rotation = ang_min; 
-            } else if (adc_value >= (int)max_bruto_ch3) {
-                rotation = ang_max;
-            } else {
-                rotation = ((float)adc_value - min_bruto_ch3) * ((ang_max - ang_min) / (max_bruto_ch3 - min_bruto_ch3)) + ang_min;
-            }
-            
-            if (rotation < ang_min) {
-                rotation = ang_min;
-            }
-            if (rotation > ang_max) {
-                rotation = ang_max;
-            }
+        // Garante que o valor esteja dentro do intervalo bruto
+        if(adc_value <= min_bruto_ch3) {
+            rotation = percent_min;
+        } else if(adc_value >= max_bruto_ch3) {
+            rotation = percent_max;
+        } else {
+            rotation = ((float)adc_value - min_bruto_ch3) / (max_bruto_ch3 - min_bruto_ch3) * (percent_max - percent_min) + percent_min;
+        }
     }
     return (int)rotation;
 }
