@@ -26,8 +26,8 @@
 #include <stdlib.h>
 
 /*---------------------------------------------------------------------------*/
-#define SEND_INTERVAL (3 * CLOCK_SECOND)
-#define ADC_PIN           2
+#define SEND_INTERVAL       (3 * CLOCK_SECOND)
+#define ADC_PIN             2
 #define LOOP_INTERVAL       (CLOCK_SECOND * 3)
 #define LEDS_PERIODIC       LEDS_GREEN
 /*---------------------------------------------------------------------------*/
@@ -45,6 +45,10 @@ static struct simple_udp_connection mcast_connection;
 static my_msg_t msg;
 static uint16_t local_counter = 0;
 static struct etimer et;
+
+/* new global for storing received message */
+static my_msg_t last_received_msg;
+static int msg_received_flag = 0;
 /*---------------------------------------------------------------------------*/
 PROCESS(mcast_and_sensor_process, "UDP receiver + local sensors");
 AUTOSTART_PROCESSES(&mcast_and_sensor_process);
@@ -58,55 +62,35 @@ receiver(struct simple_udp_connection *c,
          const uint8_t *data,
          uint16_t datalen)
 {
-  radio_value_t aux;
   my_msg_t *msgPtr = (my_msg_t *)data;
 
   leds_toggle(LEDS_GREEN);
-  printf("\n***\nMessage from: ");
+  memcpy(&last_received_msg, msgPtr, sizeof(my_msg_t));
+  msg_received_flag = 1;
+
+  printf("[INFO] Message received from: ");
   uip_debug_ipaddr_print(sender_addr);
-
-  printf("\nData received on port %d from port %d with length %d\n",
-         receiver_port, sender_port, datalen);
-
-  NETSTACK_RADIO.get_value(RADIO_PARAM_CHANNEL, &aux);
-  printf("CH: %u ", (unsigned int) aux);
-
-  aux = packetbuf_attr(PACKETBUF_ATTR_RSSI);
-  printf("RSSI: %ddBm ", (int8_t)aux);
-
-  aux = packetbuf_attr(PACKETBUF_ATTR_LINK_QUALITY);
-  printf("LQI: %u\n", aux);
-
-#if CONTIKI_TARGET_ZOUL
-  printf("{\"node_id\":%u,\"sensors\":{\"adc1\":%u,\"adc3\":%u},\"angles\":{\"angle1\":%d,\"angle3\":%d},\"counter\":%u}\n",
-         msgPtr->id, msgPtr->adc1_value, msgPtr->adc3_value, msgPtr->angle1,
-         msgPtr->angle3, msgPtr->counter);
-#else
-  printf("ID: %u, temp: %u, x: %d, y: %d, z: %d, batt: %u, counter: %u\n",
-         msgPtr->id, msgPtr->value1, msgPtr->value2, msgPtr->value3,
-         msgPtr->value4, msgPtr->battery, msgPtr->counter);
-#endif
+  printf("\n");
 }
 /*---------------------------------------------------------------------------*/
-static void
-print_local_sensor_data(void)
-{
+static void print_combined_json(void) {
   static int temperature = 0;
   static int humidity_air = 0;
 
-  // Read temperature and humidity from DHT22
   int dht_status = dht22_read_all(&temperature, &humidity_air);
-
-  // Read raw ADC value for soil moisture
   int adc_val = adc_sensors.value(ANALOG_VAC_SENSOR);
   int humidity10 = (adc_val * 1000) / 240;
 
-  // Start JSON output
-  printf("{\n");
-  printf("  \"local_counter\": %u,\n", local_counter);
+  if (!msg_received_flag) {
+    printf("[INFO] No sender message received yet. Skipping JSON.\n");
+    return;
+  }
 
-  if(dht_status != DHT22_ERROR) {
-    printf("  \"temperature_celsius\": %d.%02d,\n", temperature / 10, abs(temperature % 10));
+  printf("{\n");
+  printf("  \"id\": \"%u\",\n", local_counter);
+
+  if (dht_status != DHT22_ERROR) {
+    printf("  \"temperature_celsius\": %d.%01d,\n", temperature / 10, abs(temperature % 10));
     printf("  \"humidity_air_rh\": %d.%02d,\n", humidity_air / 10, abs(humidity_air % 10));
   } else {
     printf("  \"temperature_celsius\": null,\n");
@@ -114,10 +98,12 @@ print_local_sensor_data(void)
   }
 
   printf("  \"humidity_soil_percent\": %d.%d,\n", humidity10 / 10, humidity10 % 10);
-  printf("  \"raw_adc\": %d\n", adc_val);
+  printf("  \"angle1\": %d,\n", last_received_msg.angle1);
+  printf("  \"angle3\": %d\n", last_received_msg.angle3);
   printf("}\n");
-}
 
+  msg_received_flag = 0;
+}
 
 /*---------------------------------------------------------------------------*/
 static void
@@ -136,17 +122,14 @@ PROCESS_THREAD(mcast_and_sensor_process, ev, data)
   simple_udp_register(&mcast_connection, UDP_CLIENT_PORT, NULL,
                       UDP_CLIENT_PORT, receiver);
 
-
   adc_sensors.configure(ANALOG_VAC_SENSOR, ADC_PIN);
   SENSORS_ACTIVATE(dht22);
-  //SENSORS_ACTIVATE(adc_sensors);
-  //adc_sensors.configure(ANALOG_VAC_SENSOR, ADC_PIN);
 
   etimer_set(&et, LOOP_INTERVAL);
 
   while(1) {
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&et));
-    print_local_sensor_data();
+    print_combined_json();
     etimer_reset(&et);
     local_counter++;
   }
