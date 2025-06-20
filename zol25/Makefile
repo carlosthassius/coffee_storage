@@ -1,4 +1,4 @@
-all: 01-udp-local-multicast
+all: zol25
 
 # Linker optimizations
 SMALL = 1
