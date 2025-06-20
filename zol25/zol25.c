@@ -4,7 +4,7 @@
 #include "net/ip/uip-debug.h"
 #include "simple-udp.h"
 #include "net/packetbuf.h"
-#include "../example.h"
+#include "./example.h"
 
 #if CONTIKI_TARGET_ZOUL
 #include "dev/adc-zoul.h"
