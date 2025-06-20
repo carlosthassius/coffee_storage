@@ -4,7 +4,7 @@ all: zol25
 SMALL = 1
 
 # Includes the project-conf configuration file
-CFLAGS += -DPROJECT_CONF_H=\"../project-conf.h\"
+CFLAGS += -DPROJECT_CONF_H=\"./project-conf.h\"
 
 CONTIKI = ../../../../..
 
