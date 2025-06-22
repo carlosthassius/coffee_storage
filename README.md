@@ -5,18 +5,11 @@ This project implements a monitoring system for a coffee bean storage container 
 
 ## 🌐 Architecture
 
-```
-+------------+       +-------------+       +------------------+       +--------------------+
-|  Sensor    |       | Border      |       | MQTT Broker      |       | AWS Lambda +       |
-|  Node      | <---> | Router Node | <---> | (Mosquitto)       | <---> | API Gateway        |
-| (Zolertia) |       | (Zolertia)  |       | on Raspberry Pi   |       | + DynamoDB + S3    |
-+------------+       +-------------+       +------------------+       +--------------------+
-                                                                          |
-                                                                          v
-                                                                  +------------------+
-                                                                  | Frontend Web App |
-                                                                  +------------------+
-```
+![System Architecture](architecture.png)
+
+## 🖥️ Interface
+
+![Interface](home.png)
 
 ## 📦 Technologies
 
@@ -70,5 +63,6 @@ while true; do
 done
 ```
 
-## 📎 License
-This project is licensed under the MIT License.
+## 📎 Authors
+Carlos Freire
+David Blazheski
