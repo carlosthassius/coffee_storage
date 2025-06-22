@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Smart Coffee Gadget</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="script.js"></script>
+</head>
+<body>
+  <h1>Smart Coffee Gadget</h1>
+
+  <div class="dashboard">
+
+    <div class="card info-panel">
+      <h2>Smart Coffee Gadget</h2>
+      <p>Temperature: <span id="temp_main" class="green">--</span></p>
+      <p>Air Humidity: <span id="hum_main" class="blue">--</span></p>
+      <p>Beans Humidity: <span id="soil_humidity_main" class="blue">--</span></p>
+      <p>Coffee level: <span id="storage_main" class="red">--</span></p>
+
+      <p><strong>Alerts</strong></p>
+      <div id="alerts" class="no-alerts">- No alerts</div>
+      <a href="graphs.html" target="_blank" class="link">[View history graphs]</a>
+    </div>
+
+    <div class="card notify-panel">
+      <p><strong>Send notifications / alerts</strong></p>
+      <label>Email: <input type="text" /></label><br />
+      <label>Phone: <input type="text" /></label><br />
+      <button>Send</button>
+    </div>
+
+    <div class="combined-status-storage-panel">
+  <div class="card status-box">
+    <p class="label">Container:</p>
+    <p id="container_status" class="value red">--</p>
+    <p class="timestamp" id="timestamp">--</p>
+  </div>
+
+  <div class="card storage-box">
+    <p class="label small">Storage</p>
+    <div id="storage_box" class="coffee-fill">--</div>
+  </div>
+</div>
+
+
+    <div class="card history-panel">
+      <h2>📊 Measurement History</h2>
+      <table id="history-table">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Temp (°C)</th>
+            <th>Air humidity (%)</th>
+            <th>Beans humidity (%)</th>
+            <th>Container O/C</th>
+            <th>Storage</th>
+          </tr>
+        </thead>
+        <tbody>
+        </tbody>
+      </table>
+    </div>
+
+    
+
+    <div class="card alerts-box">
+      <h2 class="red">Alerts</h2>
+      <ul id="alert_list">
+        <!-- dynamically filled -->
+      </ul>
+    </div>
+
+  </div>
+
+  <div class="footer">
+    <p>Smart Coffee Gadget &copy; 2025</p>
+    <p>Powered by <a href="https://github.com/carlosthassius/coffee_storage">Coffee Gadget</a></p>
+  </div>
+</body>
+</html>

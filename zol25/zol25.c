@@ -1,22 +1,15 @@
 #include "contiki.h"
+#include "simple-udp.h"
+#include "./example.h"
+
 #include "net/ip/uip.h"
 #include "net/ipv6/uip-ds6.h"
 #include "net/ip/uip-debug.h"
-#include "simple-udp.h"
 #include "net/packetbuf.h"
-#include "./example.h"
 
-#if CONTIKI_TARGET_ZOUL
 #include "dev/adc-zoul.h"
 #include "dev/zoul-sensors.h"
-#include "dev/adc-sensors.h"
 #include "dev/dht22.h"
-#else
-#include "dev/adxl345.h"
-#include "dev/battery-sensor.h"
-#include "dev/i2cmaster.h"
-#include "dev/tmp102.h"
-#endif
 
 #include "sys/etimer.h"
 #include "dev/leds.h"
@@ -27,9 +20,6 @@
 
 /*---------------------------------------------------------------------------*/
 #define SEND_INTERVAL       (3 * CLOCK_SECOND)
-#define ADC_PIN             2
-#define LOOP_INTERVAL       (CLOCK_SECOND * 3)
-#define LEDS_PERIODIC       LEDS_GREEN
 /*---------------------------------------------------------------------------*/
 typedef struct {
   uint8_t id;
@@ -43,7 +33,6 @@ typedef struct {
 /*---------------------------------------------------------------------------*/
 static struct simple_udp_connection mcast_connection;
 static my_msg_t msg;
-static uint16_t local_counter = 0;
 static struct etimer et;
 
 /* new global for storing received message */
@@ -83,16 +72,16 @@ int sensor_data(char *buffer, size_t buffer_size, uint32_t pub_id) {
   unsigned long now = base_unix_time + clock_seconds();
 
   int dht_status = dht22_read_all(&temperature, &humidity_air);
-  int adc_val = adc_sensors.value(ANALOG_VAC_SENSOR);
-  int humidity10 = (adc_val * 1000) / 240;
+  int raw = adc_zoul.value(ZOUL_SENSORS_ADC1);
 
-  if (!msg_received_flag) {
-    printf("[INFO] No sender message received yet. Skipping JSON.\n");
-    return;
-  }
+  // normalize
+  int humidity_soil = (raw * 1000) / 16000;
+  // ensure that the value does not exceed the percentage range
+  if (humidity_soil > 1000) humidity_soil = 1000;
+  if (humidity_soil < 0) humidity_soil = 0;
 
   printf("{\n");
-  printf("  \"id\": \"%u\",\n", local_counter);
+  printf("  \"id\": \"%lu\",\n", pub_id);
 
   if (dht_status != DHT22_ERROR) {
     printf("  \"temperature_celsius\": %d.%01d,\n", temperature / 10, abs(temperature % 10));
@@ -102,7 +91,7 @@ int sensor_data(char *buffer, size_t buffer_size, uint32_t pub_id) {
     printf("  \"humidity_air_rh\": null,\n");
   }
 
-  printf("  \"humidity_soil_percent\": %d.%d,\n", humidity10 / 10, humidity10 % 10);
+  printf("  \"humidity_soil_percent\": %d.%d,\n", humidity_soil / 10, humidity_soil % 10);
   printf("  \"angle1\": %d,\n", last_received_msg.angle1);
   printf("  \"angle3\": %d\n", last_received_msg.angle3);
   printf("}\n");
@@ -121,7 +110,7 @@ int sensor_data(char *buffer, size_t buffer_size, uint32_t pub_id) {
   now,
   temperature / 10, abs(temperature % 10),
   humidity_air / 10, abs(humidity_air % 10),
-  humidity10 / 10, abs(humidity10 % 10),
+  humidity_soil / 10, abs(humidity_soil % 10),
   last_received_msg.angle1 / 100, abs(last_received_msg.angle1 % 100),
   last_received_msg.angle3 / 100, abs(last_received_msg.angle3 % 100));
 
@@ -138,6 +127,6 @@ set_radio_default_parameters(void)
 }
 
 void init_sensors(void){
-  adc_sensors.configure(ANALOG_VAC_SENSOR, ADC_PIN);
+  adc_zoul.configure(SENSORS_HW_INIT, ZOUL_SENSORS_ADC1);
   SENSORS_ACTIVATE(dht22);
 }

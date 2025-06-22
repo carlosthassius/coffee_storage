@@ -99,15 +99,9 @@ receiver(struct simple_udp_connection *c,
   aux = packetbuf_attr(PACKETBUF_ATTR_LINK_QUALITY);
   printf("LQI: %u\n", aux);
 
-#if CONTIKI_TARGET_ZOUL
   printf("{\"node_id\":%u,\"sensors\":{\"adc1\":%u,\"adc3\":%u},\"angles\":{\"angle1\":%d,\"angle3\":%d},\"counter\":%u}\n",
          msgPtr->id, msgPtr->adc1_value, msgPtr->adc3_value, msgPtr->angle1,
          msgPtr->angle3, msgPtr->counter);
-#else
-  printf("ID: %u, temp: %u, x: %d, y: %d, z: %d, batt: %u, counter: %u\n",
-         msgPtr->id, msgPtr->value1, msgPtr->value2, msgPtr->value3,
-         msgPtr->value4, msgPtr->battery, msgPtr->counter);
-#endif
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -157,13 +151,7 @@ PROCESS_THREAD(mcast_example_process, ev, data)
   simple_udp_register(&mcast_connection, UDP_CLIENT_PORT, NULL,
                       UDP_CLIENT_PORT, receiver);
 
-#if CONTIKI_TARGET_ZOUL
   adc_zoul.configure(SENSORS_HW_INIT, ZOUL_SENSORS_ADC_ALL);
-#else
-  SENSORS_ACTIVATE(adxl345);
-  SENSORS_ACTIVATE(tmp102);
-  SENSORS_ACTIVATE(battery_sensor);
-#endif
 
   etimer_set(&periodic_timer, SEND_INTERVAL);
 

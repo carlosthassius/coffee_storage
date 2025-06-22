@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sensor History Graphs</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      font-family: 'Nunito Sans', sans-serif;
+      padding: 20px;
+      text-align: center;
+      font-size: 18px;
+    }
+
+    h1 {
+      margin-bottom: 30px;
+    }
+
+    .grid-container {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 40px 60px;
+      justify-items: center;
+      align-items: center;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+
+    canvas {
+  width: 400px !important;
+  height: 250px !important;
+  display: block;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  box-shadow: 2px 2px 8px rgba(0,0,0,0.1);
+}
+  </style>
+</head>
+<body>
+  <h1>📈 Historical Sensor Data</h1>
+
+  <div class="grid-container">
+  <canvas id="tempChart" ></canvas>
+<canvas id="humChart" ></canvas>
+<canvas id="soilHumChart"></canvas>
+<canvas id="storageChart" ></canvas>
+
+  </div>
+
+  <!-- Your script.js file -->
+  <script src="script.js"></script>
+</body>
+</html>
