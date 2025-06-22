@@ -29,7 +29,7 @@ This project implements a monitoring system for a coffee bean storage container 
 
 ### 1. Clone this repository
 ```bash
-git clone https://github.com/carlosthassius/coffee_storage
+git clone https://github.com/carlosthassius/coffee_storage.git
 cd coffee_storage
 ```
 
